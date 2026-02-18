@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { CharactersService } from './characters.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
 
 @Controller('characters')
 export class CharactersController {
-  constructor(private readonly charactersService: CharactersService) {}
+  constructor(private readonly charactersService: CharactersService) { }
 
   @Post()
   create(@Body() createCharacterDto: CreateCharacterDto) {
@@ -18,8 +18,8 @@ export class CharactersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.charactersService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.charactersService.findOne(id);
   }
 
   @Patch(':id')
@@ -30,5 +30,13 @@ export class CharactersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.charactersService.remove(+id);
+  }
+  
+  @Post('attack')
+  async attack(
+    @Body('attackerId') attackerId: number,
+    @Body('targetId') targetId: number,
+  ) {
+    return this.charactersService.attack(attackerId, targetId);
   }
 }

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
@@ -75,6 +76,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-  "seed": "node prisma/seeds/seed.cjs"
-}
+    "seed": "node prisma/seeds/seed.cjs"
+  }
 }
