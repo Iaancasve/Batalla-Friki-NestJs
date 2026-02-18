@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { CharactersService } from './characters.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('characters')
 export class CharactersController {
@@ -41,6 +42,7 @@ export class CharactersController {
   }
 
   @Post('reset')
+  @UseGuards(AuthGuard('jwt'))
   async resetAll() {
     return this.charactersService.resetAll();
   }
