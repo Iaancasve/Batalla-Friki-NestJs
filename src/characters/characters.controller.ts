@@ -3,6 +3,8 @@ import { CharactersService } from './characters.service';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 @Controller('characters')
 export class CharactersController {
@@ -42,7 +44,8 @@ export class CharactersController {
   }
 
   @Post('reset')
-  @UseGuards(AuthGuard('jwt'))
+  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   async resetAll() {
     return this.charactersService.resetAll();
   }
