@@ -39,4 +39,9 @@ export class CharactersController {
   ) {
     return this.charactersService.attack(attackerId, targetId);
   }
+
+  @Post('reset')
+  async resetAll() {
+    return this.charactersService.resetAll();
+  }
 }

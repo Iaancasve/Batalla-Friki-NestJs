@@ -47,4 +47,18 @@ export class CharactersService {
       data: { hp: newHp },
     });
   }
+
+  async resetAll() {
+    // Obtenemos todos los personajes para saber su baseHp original
+    const characters = await this.prisma.character.findMany();
+
+    const updates = characters.map((char) =>
+      this.prisma.character.update({
+        where: { id: char.id },
+        data: { hp: char.baseHp },
+      }),
+    );
+    
+    return this.prisma.$transaction(updates);
+  }
 }

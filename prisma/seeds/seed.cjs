@@ -2,6 +2,8 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const { seedCharacters } = require('./characters.seed.cjs');
+const { seedRoles } = require('./roles.seed.cjs');
+const { seedAdminUser } = require('./admin-user.seed.cjs');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -11,6 +13,8 @@ async function main() {
   console.log('Starting seeding process...');
 
   await seedCharacters(prisma);
+  await seedRoles(prisma);
+  await seedAdminUser(prisma);
 
   console.log('Finished seeding');
 }
