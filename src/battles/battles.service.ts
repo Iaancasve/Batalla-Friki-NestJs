@@ -34,26 +34,30 @@ export class BattlesService {
       },
     });
   }
-  
+
   async handleAttack(battleId: number, damage: number) {
   const battle = await this.prisma.battle.findUnique({
     where: { id: battleId },
-    include: {
-      character1: true,
-      character2: true,
+  });
+
+  if (!battle) throw new Error('Batalla no encontrada');
+
+  const updatedCharacter = await this.prisma.character.update({
+    where: { id: battle.character2Id },
+    data: {
+      hp: {
+        decrement: damage 
+      }
     }
   });
 
-  if (!battle) return { error: 'Batalla no encontrada' };
-
-  const newHp = battle.character2.hp - damage;
-
-  this.logger.log(`Personaje ${battle.character2.name} ahora tiene ${newHp} HP`);
+  this.logger.log(`Personaje ${updatedCharacter.name} herido. Vida restante: ${updatedCharacter.hp}`);
 
   return {
     battleId,
-    characterName: battle.character2.name,
-    newHp: newHp,
+    characterName: updatedCharacter.name,
+    newHp: updatedCharacter.hp,
+    isDead: updatedCharacter.hp <= 0
   };
 }
 }
