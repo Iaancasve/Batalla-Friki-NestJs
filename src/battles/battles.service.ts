@@ -1,7 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartBattleDto } from './dto/start-battle.dto';
-import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class BattlesService {
@@ -13,12 +12,9 @@ export class BattlesService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     const character = await this.prisma.character.findUnique({ where: { id: dto.characterId } });
 
-    if (!user || !character) {
-      throw new BadRequestException('Usuario o personaje no encontrado');
-    }
-
+    if (!user || !character) throw new BadRequestException('Usuario o personaje no encontrado');
     if (user.level < character.levelRequired) {
-      throw new BadRequestException('Tu nivel es insuficiente para usar este personaje');
+      throw new BadRequestException(`Nivel insuficiente. Requieres nivel ${character.levelRequired}`);
     }
 
     return this.prisma.battle.create({
@@ -32,19 +28,69 @@ export class BattlesService {
     });
   }
 
+  
   async handleAttack(battleId: number, attackerId: number) {
     const battle = await this.prisma.battle.findUnique({
       where: { id: battleId },
-      include: {
-        character1: true,
-        character2: true,
-      },
+      include: { character1: true, character2: true },
     });
 
     if (!battle || battle.status === 'FINISHED') {
-      throw new BadRequestException('Batalla no encontrada o ya finalizada');
+      throw new BadRequestException('Batalla no encontrada o finalizada');
     }
 
+
+    if (!battle.player2Id) {
+      return this.executePvE(battle, attackerId);
+    }
+
+    return this.executePvP(battle, attackerId);
+  }
+
+  
+  private async executePvE(battle: any, attackerId: number) {
+    const playerDamage = battle.character1.attack;
+    const updatedTarget = await this.prisma.character.update({
+      where: { id: battle.character2Id },
+      data: { hp: { decrement: playerDamage } },
+    });
+
+    let isGameOver = updatedTarget.hp <= 0;
+    let aiCounterAttack: any = null;
+
+    if (!isGameOver) {
+      const aiDamage = battle.character2.attack;
+      const updatedPlayerChar = await this.prisma.character.update({
+        where: { id: battle.character1Id },
+        data: { hp: { decrement: aiDamage } },
+      });
+
+      aiCounterAttack = {
+        attackerName: battle.character2.name,
+        damageApplied: aiDamage,
+        targetHp: updatedPlayerChar.hp < 0 ? 0 : updatedPlayerChar.hp,
+      };
+
+      if (updatedPlayerChar.hp <= 0) isGameOver = true;
+    }
+
+    if (isGameOver) {
+      const playerWon = updatedTarget.hp <= 0;
+      await this.finishBattle(battle.id, playerWon ? attackerId : 0);
+    }
+
+    return {
+      attackerName: battle.character1.name,
+      targetName: updatedTarget.name,
+      damageApplied: playerDamage,
+      targetHp: updatedTarget.hp < 0 ? 0 : updatedTarget.hp,
+      isGameOver,
+      aiCounterAttack,
+    };
+  }
+
+  
+  private async executePvP(battle: any, attackerId: number) {
     let attackerChar, targetChar, targetId, targetUserId;
 
     if (attackerId === battle.player1Id) {
@@ -59,51 +105,16 @@ export class BattlesService {
       targetUserId = battle.player1Id;
     }
 
-    
     const damage = attackerChar.attack;
-
-    
     const updatedTarget = await this.prisma.character.update({
       where: { id: targetId },
-      data: { hp: { decrement: damage } }
+      data: { hp: { decrement: damage } },
     });
 
     const isGameOver = updatedTarget.hp <= 0;
 
     if (isGameOver) {
-      await this.prisma.$transaction(async (tx) => {
-        
-        await tx.battle.update({
-          where: { id: battleId },
-          data: { status: 'FINISHED', winnerId: attackerId }
-        });
-
-        
-        const winner = await tx.user.findUnique({ where: { id: attackerId } });
-        if (winner) {
-          let newXp = (winner.xp || 0) + 10;
-          let newLevel = winner.level;
-
-          
-          if (newXp >= 100) {
-            newLevel++;
-            newXp -= 100;
-          }
-
-          await tx.user.update({
-            where: { id: attackerId },
-            data: { xp: newXp, level: newLevel, wins: { increment: 1 } }
-          });
-        }
-
-       
-        if (targetUserId) {
-          await tx.user.update({
-            where: { id: targetUserId },
-            data: { losses: { increment: 1 } }
-          });
-        }
-      });
+      await this.finishBattle(battle.id, attackerId, targetUserId);
     }
 
     return {
@@ -111,7 +122,37 @@ export class BattlesService {
       targetName: updatedTarget.name,
       damageApplied: damage,
       targetHp: updatedTarget.hp < 0 ? 0 : updatedTarget.hp,
-      isGameOver
+      isGameOver,
     };
+  }
+
+  
+  private async finishBattle(battleId: number, winnerId: number, loserId?: number) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.battle.update({
+        where: { id: battleId },
+        data: { status: 'FINISHED', winnerId },
+      });
+
+      if (winnerId > 0) {
+        const winner = await tx.user.findUnique({ where: { id: winnerId } });
+        if (winner) {
+          let newXp = (winner.xp || 0) + 10;
+          let newLevel = winner.level;
+          if (newXp >= 100) { newLevel++; newXp -= 100; }
+          await tx.user.update({
+            where: { id: winnerId },
+            data: { xp: newXp, level: newLevel, wins: { increment: 1 } },
+          });
+        }
+      }
+      
+      if (loserId) {
+        await tx.user.update({
+          where: { id: loserId },
+          data: { losses: { increment: 1 } },
+        });
+      }
+    });
   }
 }

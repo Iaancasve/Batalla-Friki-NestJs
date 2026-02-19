@@ -1,5 +1,16 @@
+import { IsInt, IsPositive, IsOptional } from 'class-validator';
+
 export class StartBattleDto {
-  characterId: number;      // El personaje que elige el usuario
-  rivalId?: number;         // Opcional (si es nulo, es contra la máquina)
-  rivalCharacterId: number; // El personaje del rival
+  @IsInt()
+  @IsPositive()
+  characterId: number; 
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  rivalId?: number; 
+
+  @IsInt()
+  @IsPositive()
+  rivalCharacterId: number; 
 }
