@@ -1,9 +1,11 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartBattleDto } from './dto/start-battle.dto';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class BattlesService {
+  private readonly logger = new Logger('BattlesGateway'); 
   constructor(private prisma: PrismaService) {}
 
   async startBattle(userId: number, dto: StartBattleDto) {
@@ -32,4 +34,26 @@ export class BattlesService {
       },
     });
   }
+  
+  async handleAttack(battleId: number, damage: number) {
+  const battle = await this.prisma.battle.findUnique({
+    where: { id: battleId },
+    include: {
+      character1: true,
+      character2: true,
+    }
+  });
+
+  if (!battle) return { error: 'Batalla no encontrada' };
+
+  const newHp = battle.character2.hp - damage;
+
+  this.logger.log(`Personaje ${battle.character2.name} ahora tiene ${newHp} HP`);
+
+  return {
+    battleId,
+    characterName: battle.character2.name,
+    newHp: newHp,
+  };
+}
 }

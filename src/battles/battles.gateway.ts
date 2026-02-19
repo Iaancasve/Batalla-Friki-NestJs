@@ -9,15 +9,18 @@ import { JwtService } from '@nestjs/jwt';
 import { WebsocketsService } from './websockets.servie';
 import { SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common'; 
+import { BattlesService } from './battles.service';
+
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class BattlesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
-    private readonly logger = new Logger('BattlesGateway'); //
+    private readonly logger = new Logger('BattlesGateway'); 
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly websocketsService: WebsocketsService,
+    private readonly battlesService: BattlesService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -48,18 +51,34 @@ export class BattlesGateway implements OnGatewayConnection, OnGatewayDisconnect 
     this.logger.debug(`Evento joinBattle recibido para la batalla: ${payload.battleId}`);
 
     if (!client) {
-      this.logger.error('El objeto client (socket) es undefined'); //
+      this.logger.error('El objeto client (socket) es undefined'); 
       return { status: 'error', message: 'Socket no detectado' };
     }
 
     const roomName = `battle_${payload.battleId}`;
     client.join(roomName);
 
-    this.logger.log(`Socket ${client.id} unido a ${roomName}`); //
+    this.logger.log(`Socket ${client.id} unido a ${roomName}`); 
 
     return {
       status: 'ok',
       message: `Te has unido a la sala ${roomName}`
     };
   }
+
+  @SubscribeMessage('attack')
+  async handleAttack(
+  @ConnectedSocket() client: Socket,
+  @MessageBody() payload: { battleId: number, damage: number }
+) {
+  const roomName = `battle_${payload.battleId}`;
+  const result = await this.battlesService.handleAttack(payload.battleId, payload.damage);
+
+  this.server.to(roomName).emit('attackResult', {
+    attacker: client.data.user.email,
+    damageApplied: payload.damage,
+    currentHp: result.newHp,
+    message: `¡${client.data.user.email} ha causado ${payload.damage} de daño!`
+  });
+}
 }
