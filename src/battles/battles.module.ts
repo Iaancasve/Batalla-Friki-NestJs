@@ -4,7 +4,7 @@ import { BattlesController } from './battles.controller';
 import { BattlesGateway } from './battles.gateway';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
-import { WebsocketsService } from './websockets.servie';
+import { WebsocketsService } from './websockets.service';
 
 @Module({
   imports: [
