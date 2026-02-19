@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  engineType      = "library"
 }
 
 datasource db {
@@ -14,7 +15,13 @@ model User {
   xp        Int        @default(0)
   wins      Int        @default(0)
   losses    Int        @default(0)
-  roles     UserRole[] 
+  roles     UserRole[]
+  
+  // Relaciones con las batallas para poder consultar el historial
+  battlesAsP1 Battle[]   @relation("Player1")
+  battlesAsP2 Battle[]   @relation("Player2")
+  battlesWon  Battle[]   @relation("Winner")
+
   createdAt DateTime   @default(now())
 }
 
@@ -23,7 +30,6 @@ model Role {
   name  String     @unique // ADMIN | USER
   users UserRole[] 
 }
-
 
 model UserRole {
   userId Int
@@ -41,4 +47,31 @@ model Character {
   baseHp        Int
   attack        Int
   levelRequired Int      @default(1)
+  
+  // Relaciones para saber en qué batallas se usó el personaje
+  battlesAsChar1 Battle[] @relation("Char1")
+  battlesAsChar2 Battle[] @relation("Char2")
+}
+
+model Battle {
+  id            Int      @id @default(autoincrement())
+  
+  // Jugadores
+  player1Id     Int
+  player2Id     Int?     // Opcional para cuando es contra la máquina
+  player1       User     @relation("Player1", fields: [player1Id], references: [id])
+  player2       User?    @relation("Player2", fields: [player2Id], references: [id])
+
+  // Personajes utilizados
+  character1Id  Int
+  character2Id  Int
+  character1    Character @relation("Char1", fields: [character1Id], references: [id])
+  character2    Character @relation("Char2", fields: [character2Id], references: [id])
+
+  // Resultado
+  winnerId      Int?     // ID del User que ganó
+  winner        User?    @relation("Winner", fields: [winnerId], references: [id])
+  
+  status        String   @default("STARTED") // STARTED | FINISHED
+  createdAt     DateTime @default(now())
 }
