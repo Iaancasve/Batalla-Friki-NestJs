@@ -1,7 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { CharactersService } from './characters.service';
-import { CreateCharacterDto } from './dto/create-character.dto';
-import { UpdateCharacterDto } from './dto/update-character.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -11,7 +9,9 @@ export class CharactersController {
   constructor(private readonly charactersService: CharactersService) { }
 
   @Post()
-  create(@Body() createCharacterDto: CreateCharacterDto) {
+  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  create(@Body() createCharacterDto: any) {
     return this.charactersService.create(createCharacterDto);
   }
 
@@ -26,15 +26,19 @@ export class CharactersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCharacterDto: UpdateCharacterDto) {
+  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  update(@Param('id') id: string, @Body() updateCharacterDto: any) {
     return this.charactersService.update(+id, updateCharacterDto);
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   remove(@Param('id') id: string) {
     return this.charactersService.remove(+id);
   }
-  
+
   @Post('attack')
   async attack(
     @Body('attackerId') attackerId: number,

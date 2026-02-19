@@ -9,7 +9,9 @@ export class CharactersService {
   constructor(private prisma: PrismaService) { }
 
   create(createCharacterDto: CreateCharacterDto) {
-    return 'This action adds a new character';
+    return this.prisma.character.create({
+      data: createCharacterDto,
+    });
   }
 
   findAll() {
@@ -29,11 +31,16 @@ export class CharactersService {
   }
 
   update(id: number, updateCharacterDto: UpdateCharacterDto) {
-    return `This action updates a #${id} character`;
+    return this.prisma.character.update({
+      where: { id },
+      data: updateCharacterDto,
+    });
   }
 
   remove(id: number) {
-    return `This action removes a #${id} character`;
+    return this.prisma.character.delete({
+      where: { id },
+    });
   }
 
   async attack(attackerId: number, targetId: number) {
@@ -58,7 +65,7 @@ export class CharactersService {
         data: { hp: char.baseHp },
       }),
     );
-    
+
     return this.prisma.$transaction(updates);
   }
 }

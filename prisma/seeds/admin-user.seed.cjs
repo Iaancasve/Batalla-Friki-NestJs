@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+
 async function seedAdminUser(prisma) {
   console.log('Seeding users...');
 
@@ -12,12 +13,12 @@ async function seedAdminUser(prisma) {
   await prisma.user.upsert({
     where: { email: 'admin@admin.com' },
     update: {
-        password: adminPassword, 
+        password: adminPassword,
     },
     create: {
       email: 'admin@admin.com',
       password: adminPassword,
-      level: 1,
+      level: 10,
       roles: {
         create: [
           { roleId: adminRole.id }
