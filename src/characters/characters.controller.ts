@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
 import { CharactersService } from './characters.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -18,6 +18,12 @@ export class CharactersController {
   @Get()
   findAll() {
     return this.charactersService.findAll();
+  }
+
+  @Get('available')
+  @UseGuards(AuthGuard('jwt'))
+  async getAvailable(@Request() req) {
+    return this.charactersService.findAvailableForUser(req.user.userId);
   }
 
   @Get(':id')
@@ -53,4 +59,6 @@ export class CharactersController {
   async resetAll() {
     return this.charactersService.resetAll();
   }
+
+  
 }

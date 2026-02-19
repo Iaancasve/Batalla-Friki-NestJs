@@ -43,6 +43,7 @@ export class CharactersService {
     });
   }
 
+  // Atacar
   async attack(attackerId: number, targetId: number) {
     const attacker = await this.findOne(attackerId);
     const target = await this.findOne(targetId);
@@ -55,6 +56,8 @@ export class CharactersService {
     });
   }
 
+
+  // Restablecer vida
   async resetAll() {
     // Obtenemos todos los personajes para saber su baseHp original
     const characters = await this.prisma.character.findMany();
@@ -67,5 +70,23 @@ export class CharactersService {
     );
 
     return this.prisma.$transaction(updates);
+  }
+
+  // Buscar personajes por nivel de usuario
+  async findAvailableForUser(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { level: true }
+    });
+
+    if (!user) throw new Error('Usuario no encontrado');
+
+    return this.prisma.character.findMany({
+      where: {
+        levelRequired: {
+          lte: user.level 
+        }
+      }
+    });
   }
 }

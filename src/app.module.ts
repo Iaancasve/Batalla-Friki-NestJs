@@ -6,11 +6,12 @@ import { CharactersModule } from './characters/characters.module';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { BattlesModule } from './battles/battles.module';
 
 @Module({
   imports: [PrismaModule, CharactersModule, ConfigModule.forRoot({
               isGlobal: true,
-           }), UsersModule, AuthModule,],
+           }), UsersModule, AuthModule, BattlesModule,],
   controllers: [AppController],
   providers: [AppService],
 })
