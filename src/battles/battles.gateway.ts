@@ -67,10 +67,7 @@ export class BattlesGateway implements OnGatewayConnection, OnGatewayDisconnect 
     }
 
     @SubscribeMessage('attack')
-    async handleAttack(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() payload: { battleId: number }
-    ) {
+    async handleAttack(client: Socket, payload: { battleId: number }) {
         const roomName = `battle_${payload.battleId}`;
         const userId = client.data.user.sub; 
 

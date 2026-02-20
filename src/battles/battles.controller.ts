@@ -7,9 +7,11 @@ import { StartBattleDto } from './dto/start-battle.dto';
 export class BattlesController {
   constructor(private readonly battlesService: BattlesService) {}
 
-  @Post('start')
+  @Post() 
   @UseGuards(AuthGuard('jwt'))
-  async start(@Request() req, @Body() dto: StartBattleDto) {
-    return this.battlesService.startBattle(req.user.userId, dto);
+  async startBattle(@Body() dto: StartBattleDto, @Request() req) {
+   
+    const userId = req.user.userId || req.user.sub; 
+    return this.battlesService.startBattle(userId, dto);
   }
 }
