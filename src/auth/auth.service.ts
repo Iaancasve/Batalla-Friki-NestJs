@@ -1,40 +1,55 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
     constructor(
-        private prisma: PrismaService,
+        private usersService: UsersService,
         private jwtService: JwtService,
     ) { }
 
-    async login(email: string, pass: string) {
-        const user = await this.prisma.user.findUnique({
-            where: { email },
-            include: {
-                roles: {
-                    include: {
-                        role: true 
-                    }
-                }
-            },
+   
+    async register(createUserDto: any) {
+        const existingUser = await this.usersService.findOneByEmail(createUserDto.email);
+        if (existingUser) {
+            throw new BadRequestException('El email ya está registrado');
+        }
+
+        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        
+        const user = await this.usersService.create({
+            ...createUserDto,
+            password: hashedPassword,
+            level: 1,
+            xp: 0
         });
 
-        if (user) {
-            const isMatch = await bcrypt.compare(pass, user.password);
-            if (isMatch) {
-                const payload = {
-                    sub: user.id,
-                    email: user.email,
-                    roles: user.roles.map((ur) => ur.role.name)
-                };
-                return {
-                    access_token: this.jwtService.sign(payload),
-                };
+        
+        return this.login(user);
+    }
+
+    
+    async login(user: any) {
+        const payload = { email: user.email, sub: user.id, roles: user.roles }; 
+        return {
+            access_token: this.jwtService.sign(payload),
+            user: {
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+                level: user.level
             }
+        };
+    }
+
+    async validateUser(email: string, pass: string): Promise<any> {
+        const user = await this.usersService.findOneByEmail(email);
+        if (user && await bcrypt.compare(pass, user.password)) {
+            const { password, ...result } = user;
+            return result;
         }
-        throw new UnauthorizedException('Credenciales inválidas');
+        return null;
     }
 }
