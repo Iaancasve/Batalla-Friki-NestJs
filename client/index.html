@@ -2,56 +2,61 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Batalla Friki - Arena</title>
+    <title>Arena Friki - PvP & PvE</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        :root { --primary: #e91e63; --bg: #1a1a1a; --card: #2d2d2d; }
+        :root { --primary: #e91e63; --secondary: #4caf50; --bg: #1a1a1a; --card: #2d2d2d; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .container { background: var(--card); padding: 25px; border-radius: 12px; width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid #444; }
         .hidden { display: none; }
-        .character-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-        .char-card { border: 2px solid #444; padding: 15px; border-radius: 10px; cursor: pointer; text-align: center; background: #252525; }
-        .char-card.selected { border-color: #4caf50; background: #1e2e1e; }
-        .hp-bar { width: 100%; height: 18px; background: #444; border-radius: 10px; overflow: hidden; margin: 8px 0; }
-        .hp-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.4s ease; }
-        .battle-log { background: #000; height: 150px; overflow-y: auto; padding: 12px; font-family: monospace; font-size: 13px; border-radius: 6px; border: 1px solid #444; margin-top: 15px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: none; box-sizing: border-box; }
-        button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #555; }
+        .character-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .char-card { border: 2px solid #444; padding: 10px; border-radius: 8px; cursor: pointer; text-align: center; background: #252525; }
+        .char-card.selected { border-color: var(--secondary); background: #1e2e1e; }
+        .hp-bar { width: 100%; height: 18px; background: #444; border-radius: 10px; overflow: hidden; }
+        .hp-fill { height: 100%; background: var(--secondary); width: 100%; transition: width 0.4s; }
+        .battle-log { background: #000; height: 120px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 12px; border: 1px solid #444; margin-top: 10px; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .btn-pve { background: #555; } .btn-pvp { background: var(--primary); } .btn-join { background: var(--secondary); }
     </style>
 </head>
 <body>
-
     <h1>⚔️ Batalla Friki ⚔️</h1>
 
     <div id="auth-section" class="container">
-        <h3>Identificación</h3>
-        <input type="email" id="email-input" placeholder="Email" value="prueba@test.com">
-        <input type="password" id="password-input" placeholder="Contraseña" value="123456">
-        <button onclick="login()">ENTRAR</button>
+        <h3>Acceso</h3>
+        <input type="email" id="email-input" placeholder="Email" value="jugador1@test.com" style="width: 94%; padding: 10px; margin-bottom: 10px;">
+        <input type="password" id="password-input" placeholder="Password" value="123456" style="width: 94%; padding: 10px; margin-bottom: 10px;">
+        <button onclick="login()" style="background: var(--primary);">ENTRAR</button>
     </div>
 
     <div id="selection-section" class="container hidden">
         <h3 id="user-info"></h3>
+        <h4>1. Elige tu Personaje</h4>
         <div id="character-list" class="character-grid"></div>
-        
-        <label>ID Personaje Rival (IA):</label>
-        <input type="number" id="rival-id-input" value="2">
-        
-        <button onclick="startBattle()">¡INICIAR COMBATE!</button>
+
+        <div style="border-top: 1px solid #444; margin-top: 20px; padding-top: 10px;">
+            <h4>2. Modo de Juego</h4>
+            <button class="btn-pve" onclick="startBattle(false)">🕹️ Pelear contra IA (Sauron)</button>
+            <button class="btn-pvp" onclick="startBattle(true)">👥 Crear Sala PvP (Esperar Humano)</button>
+        </div>
+
+        <div id="pvp-lobby" style="margin-top: 20px;">
+            <h4>Partidas esperando oponente:</h4>
+            <div id="battle-list"><p style="color: #888;">No hay salas abiertas...</p></div>
+        </div>
     </div>
 
     <div id="battle-section" class="container hidden">
-        <h3 id="battle-title">🔥 Combate en curso</h3>
+        <h3 id="battle-title">🔥 Arena de Combate</h3>
         <div>
-            <span id="p-name">Tú</span>
+            <span>Tú</span>
             <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
         </div>
-        <div style="margin-top: 20px; text-align: right;">
-            <span id="e-name">Rival (IA)</span>
+        <div style="margin-top: 15px; text-align: right;">
+            <span id="enemy-name">Rival</span>
             <div class="hp-bar"><div id="e-hp" class="hp-fill" style="background: #f44336;"></div></div>
         </div>
-        <button id="attack-btn" onclick="sendAttack()">💥 ¡ATACAR!</button>
+        <button id="attack-btn" onclick="sendAttack()" style="background: var(--primary); margin-top: 15px;">💥 ATACAR</button>
         <div id="battle-log" class="battle-log"></div>
     </div>
 
@@ -61,43 +66,30 @@
         async function login() {
             const email = document.getElementById('email-input').value;
             const password = document.getElementById('password-input').value;
-            try {
-                let res = await fetch('http://localhost:3000/auth/login', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password})
-                });
-                
-                if(!res.ok) {
-                    res = await fetch('http://localhost:3000/auth/register', {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({email, password})
-                    });
-                }
-
-                const data = await res.json();
-                token = data.access_token;
-                user = data.user;
-                initLobby();
-                initSocket();
-            } catch(e) { alert("Error en Autenticación"); }
+            const res = await fetch('http://localhost:3000/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            token = data.access_token; user = data.user;
+            initLobby(); initSocket();
         }
 
         async function initLobby() {
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('selection-section').classList.remove('hidden');
-            document.getElementById('user-info').innerText = `Usuario: ${user.email} (Nivel ${user.level})`;
+            document.getElementById('user-info').innerText = `Hola, ${user.email} (Lvl ${user.level})`;
 
             const res = await fetch('http://localhost:3000/characters/available', {
-                headers: {'Authorization': `Bearer ${token}`}
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             const chars = await res.json();
             const list = document.getElementById('character-list');
             list.innerHTML = '';
-            
             chars.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'char-card';
-                div.innerHTML = `<strong>${c.name}</strong><br>⚔️ Atk: ${c.attack}`;
+                div.innerHTML = `<strong>${c.name}</strong><br>⚔️ ${c.attack}`;
                 div.onclick = () => {
                     document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
                     div.classList.add('selected');
@@ -109,60 +101,77 @@
 
         function initSocket() {
             socket = io('http://localhost:3000', { auth: { token: `Bearer ${token}` } });
-            
+
+            socket.on('newBattleCreated', (battle) => {
+                if(battle.player1Id === user.id) return;
+                const list = document.getElementById('battle-list');
+                if(list.querySelector('p')) list.innerHTML = '';
+                const btn = document.createElement('button');
+                btn.className = 'btn-join';
+                btn.innerText = `Unirse a Partida de Jugador #${battle.player1Id}`;
+                btn.onclick = () => joinBattle(battle.id);
+                list.appendChild(btn);
+            });
+
+            socket.on('opponentJoined', (data) => {
+                document.getElementById('battle-log').innerHTML += `<div style="color: cyan">📢 ¡Un oponente se ha unido! ¡A pelear!</div>`;
+                document.getElementById('attack-btn').disabled = false;
+            });
+
             socket.on('attackResult', (data) => {
                 const log = document.getElementById('battle-log');
-                log.innerHTML += `<div>⚔️ ${data.attackerName} ataca a ${data.targetName} (-${data.damageApplied})</div>`;
+                log.innerHTML += `<div>⚔️ Ataque recibido: -${data.damageApplied} HP</div>`;
                 document.getElementById('e-hp').style.width = data.targetHp + '%';
-
-                if (data.aiCounterAttack) {
+                if(data.aiCounterAttack) {
                     setTimeout(() => {
-                        log.innerHTML += `<div style="color:orange">🤖 IA responde (-${data.aiCounterAttack.damageApplied} HP)</div>`;
+                        log.innerHTML += `<div style="color:orange">🤖 IA contraataca!</div>`;
                         document.getElementById('p-hp').style.width = data.aiCounterAttack.targetHp + '%';
-                        log.scrollTop = log.scrollHeight;
                     }, 600);
                 }
-
-                if (data.isGameOver) {
+                if(data.isGameOver) {
+                    log.innerHTML += `<h3>FIN DE LA BATALLA</h3>`;
                     document.getElementById('attack-btn').disabled = true;
-                    log.innerHTML += `<h3 style="color:#4caf50">¡BATALLA TERMINADA!</h3>`;
                 }
                 log.scrollTop = log.scrollHeight;
             });
         }
 
-        async function startBattle() {
-            if(!selectedCharId) return alert("Debes seleccionar un personaje de la lista");
+        async function startBattle(isPvP) {
+            if(!selectedCharId) return alert("Elige personaje");
+            const res = await fetch('http://localhost:3000/battles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ characterId: selectedCharId, rivalCharacterId: isPvP ? 0 : 2 })
+            });
+            const battle = await res.json();
+            currentBattleId = battle.id;
+            socket.emit('joinBattle', { battleId: currentBattleId });
+
+            document.getElementById('selection-section').classList.add('hidden');
+            document.getElementById('battle-section').classList.remove('hidden');
             
-            // Aquí es donde daba el error: el ID debe coincidir con el input del HTML
-            const rivalCharId = parseInt(document.getElementById('rival-id-input').value);
+            if(isPvP) {
+                document.getElementById('battle-log').innerHTML = "Esperando que alguien se una...";
+                document.getElementById('attack-btn').disabled = true;
+            }
+        }
 
-            try {
-                const res = await fetch('http://localhost:3000/battles', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-                    body: JSON.stringify({ 
-                        characterId: selectedCharId, 
-                        rivalCharacterId: rivalCharId 
-                    })
-                });
-
-                if (!res.ok) throw new Error("Error al crear batalla");
-
-                const battle = await res.json();
-                currentBattleId = battle.id;
-                
-                socket.emit('joinBattle', { battleId: currentBattleId });
-                
+        async function joinBattle(id) {
+            if(!selectedCharId) return alert("Elige tu personaje primero");
+            const res = await fetch(`http://localhost:3000/battles/${id}/join`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ characterId: selectedCharId })
+            });
+            if(res.ok) {
+                currentBattleId = id;
+                socket.emit('joinBattle', { battleId: id });
                 document.getElementById('selection-section').classList.add('hidden');
                 document.getElementById('battle-section').classList.remove('hidden');
-            } catch (e) {
-                alert(e.message);
             }
         }
 
         function sendAttack() {
-            if (!currentBattleId) return;
             socket.emit('attack', { battleId: currentBattleId });
         }
     </script>

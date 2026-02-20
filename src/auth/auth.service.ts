@@ -10,7 +10,7 @@ export class AuthService {
         private jwtService: JwtService,
     ) { }
 
-   
+
     async register(createUserDto: any) {
         const existingUser = await this.usersService.findOneByEmail(createUserDto.email);
         if (existingUser) {
@@ -18,7 +18,7 @@ export class AuthService {
         }
 
         const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        
+
         const user = await this.usersService.create({
             ...createUserDto,
             password: hashedPassword,
@@ -26,19 +26,26 @@ export class AuthService {
             xp: 0
         });
 
-        
+
         return this.login(user);
     }
 
-    
+
     async login(user: any) {
-        const payload = { email: user.email, sub: user.id, roles: user.roles }; 
+        const roleNames = user.roles?.map((ur: any) => ur.role?.name || ur.role) || [];
+
+        const payload = {
+            email: user.email,
+            sub: user.id,
+            roles: roleNames 
+        };
+
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
                 email: user.email,
-                roles: user.roles,
+                roles: roleNames,
                 level: user.level
             }
         };

@@ -24,15 +24,17 @@ export class BattlesGateway implements OnGatewayConnection, OnGatewayDisconnect 
     ) { }
 
     async handleConnection(client: Socket) {
-        const token = client.handshake.headers['token'] as string;
+
+        const token = client.handshake.auth?.token || client.handshake.headers['token'];
+
         try {
-            const payload = await this.jwtService.verifyAsync(token);
-            client.data.user = payload;
+            const cleanToken = token?.replace('Bearer ', '');
+            const payload = await this.jwtService.verifyAsync(cleanToken);
+            client.data.user = payload; 
 
             this.websocketsService.registerClient(client);
-
-            console.log(`Clientes conectados: ${this.websocketsService.getConnectedClients()}`);
         } catch (e) {
+            this.logger.error('Error de autenticación en Socket');
             client.disconnect();
         }
     }
@@ -42,39 +44,30 @@ export class BattlesGateway implements OnGatewayConnection, OnGatewayDisconnect 
         console.log(`Clientes restantes: ${this.websocketsService.getConnectedClients()}`);
     }
 
+    notifyNewBattle(battle: any) {
+        this.server.emit('newBattleCreated', battle);
+    }
+
     @SubscribeMessage('joinBattle')
-    handleJoinBattle(
-        @ConnectedSocket() client: Socket,
-        @MessageBody() payload: { battleId: number }
-    ) {
-
-        this.logger.debug(`Evento joinBattle recibido para la batalla: ${payload.battleId}`);
-
-        if (!client) {
-            this.logger.error('El objeto client (socket) es undefined');
-            return { status: 'error', message: 'Socket no detectado' };
-        }
-
+    handleJoinBattle(@ConnectedSocket() client: Socket, @MessageBody() payload: { battleId: number }) {
         const roomName = `battle_${payload.battleId}`;
         client.join(roomName);
+        this.logger.log(`Socket ${client.id} se unió a la sala ${roomName}`);
 
-        this.logger.log(`Socket ${client.id} unido a ${roomName}`);
+        this.server.to(roomName).emit('playerJoined', { userId: client.data.user.sub });
 
-        return {
-            status: 'ok',
-            message: `Te has unido a la sala ${roomName}`
-        };
+        return { status: 'ok' };
     }
 
     @SubscribeMessage('attack')
     async handleAttack(client: Socket, payload: { battleId: number }) {
         const roomName = `battle_${payload.battleId}`;
-        const userId = client.data.user.sub; 
+        const userId = client.data.user.sub;
 
         try {
             const result = await this.battlesService.handleAttack(payload.battleId, userId);
 
-            
+
             this.server.to(roomName).emit('attackResult', {
                 message: `${result.attackerName} atacó a ${result.targetName} haciendo ${result.damageApplied} de daño!`,
                 targetHp: result.targetHp,
